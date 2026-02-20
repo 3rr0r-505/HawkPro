@@ -9,7 +9,7 @@
 ![Docker](https://img.shields.io/badge/Docker-Container-2496ED?logo=docker&logoColor=white)
 ![Monitoring](https://img.shields.io/badge/Type-Process%20Monitor-red?logo=htop)
 
-**HawkPro** is a lightweight, terminal-based Linux system & process monitor built with **C++ and ncurses**. It provides real-time system metrics and a sortable process table in a clean, keyboard-driven interface.
+**HawkPro** is a lightweight, terminal-based Linux system process monitor built with **C++ and ncurses**. It provides real-time system metrics and a sortable process table in a clean, keyboard-driven interface.
 
 ## ✨ Features
 
