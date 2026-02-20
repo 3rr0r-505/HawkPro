@@ -1,0 +1,50 @@
+.TH HAWKPRO 1 "HawkPro v1.0" "User Commands"
+.SH NAME
+HawkPro \- terminal-based Linux system process monitor
+
+.SH SYNOPSIS
+.B hawkpro
+[\-\-install] [\-\-uninstall]
+
+.SH DESCRIPTION
+HawkPro is a lightweight ncurses-based system monitor for Linux.
+It displays real-time system metrics and a sortable process table
+within a terminal interface.
+
+.SH OPTIONS
+.TP
+.B \-\-install
+Check installation status.
+
+.TP
+.B \-\-uninstall
+Uninstall HawkPro completely (removes binary, man page, and lifecycle manager).
+
+.SH IN-APP CONTROLS
+The following keyboard shortcuts are available while HawkPro is running:
+
+.TP
+.B C / c
+Sort process table by CPU usage.
+
+.TP
+.B M / m
+Sort process table by memory usage.
+
+.TP
+.B U / u
+Sort process table by user.
+
+.TP
+.B Ctrl+F
+Search for a process by name.
+
+.TP
+.B Q / q
+Quit HawkPro.
+
+.SH AUTHOR
+5pyd3r
+
+.SH VERSION
+HawkPro v1.0
