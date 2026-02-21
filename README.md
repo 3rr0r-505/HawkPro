@@ -49,8 +49,10 @@ sudo bash installer.sh
 
 Build image & Run:
 ```bash
+git clone https://github.com/3rr0r-505/HawkPro.git
+cd HawkPro
 docker build -t hawkpro .
-docker run -it --pid=host --privileged hawkpro
+docker run -it --rm --pid=host --net=host --privileged -v /proc:/proc hawkpro
 ```
 
 ## 🛠 Build From Source (Manual)
