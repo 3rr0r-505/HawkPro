@@ -5,7 +5,7 @@
 
 set -e
 
-REPO_URL="https://github.com/yourusername/HawkPro.git"   # CHANGE THIS
+REPO_URL="https://github.com/3rr0r-505/HawkPro.git"
 TMP_DIR="$(mktemp -d)"
 INSTALL_BIN="/usr/local/bin"
 MAN_DIR="/usr/local/share/man/man1"
