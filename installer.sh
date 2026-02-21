@@ -81,7 +81,7 @@ UNINSTALLER="/usr/local/bin/hawkpro-uninstall"
 MANPAGE="/usr/local/share/man/man1/hawkpro.1"
 
 require_root() {
-    [[ "$(id -u)" != "0" ]] && { echo "Run with sudo"; exit 1; }
+    [[ "$(id -u)" -ne 0 ]] && { echo "Run with sudo"; exit 1; }
 }
 
 uninstall_hawkpro() {
