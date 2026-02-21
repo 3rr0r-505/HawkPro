@@ -1,10 +1,10 @@
 #!/usr/bin/env bash
 # -----------------------------------------------------------------------------
 # HawkPro Bootstrap Installer
-# v1.1.0 - Cocoon
+# Final Production Release Edition
 # -----------------------------------------------------------------------------
 
-set -e
+set -euo pipefail
 
 # ---------------- Config ----------------
 
@@ -13,14 +13,14 @@ TMP_DIR="$(mktemp -d)"
 
 INSTALL_BIN="/usr/local/bin"
 MAN_DIR="/usr/local/share/man/man1"
-STATE_FILE="/usr/local/share/hawkpro_install_state"
+INSTALL_MARK="/usr/local/share/hawkpro.installed"
 
 BINARY="$INSTALL_BIN/hawkpro"
 CTL="$INSTALL_BIN/hawkproctl"
 MANPAGE="$MAN_DIR/hawkpro.1"
 
-ALIAS_BLOCK_START="# >>> HawkPro alias start >>>"
-ALIAS_BLOCK_END="# <<< HawkPro alias end <<<"
+ALIAS_START="# >>> HawkPro alias start >>>"
+ALIAS_END="# <<< HawkPro alias end <<<"
 
 # ---------------- Shell Detection ----------------
 
@@ -34,8 +34,6 @@ detect_shell_rc() {
 
 BASHRC="$(detect_shell_rc)"
 
-# ---------------- Shell Refresh ----------------
-
 refresh_shell() {
     if [[ "$BASHRC" == *fish/config.fish ]]; then
         fish -c "source $BASHRC" 2>/dev/null || true
@@ -44,35 +42,10 @@ refresh_shell() {
     fi
 }
 
-# ---------------- Transaction System ----------------
-
-start_transaction() { echo "IN_PROGRESS" > "$STATE_FILE"; }
-
-commit_transaction() { echo "INSTALLED" > "$STATE_FILE"; }
-
-rollback_install() {
-
-    echo "[!] Rolling back..."
-
-    rm -f "$BINARY"
-    rm -f "$CTL"
-    rm -f "$MANPAGE"
-
-    remove_alias
-
-    rm -f "$STATE_FILE"
-
-    mandb >/dev/null 2>&1 || true
-
-    echo "[!] Rollback completed."
-}
-
-trap 'rollback_install' ERR
-
 # ---------------- Safety Helpers ----------------
 
 require_root() {
-    [[ $EUID -ne 0 ]] && { echo "Run with sudo"; exit 1; }
+    [[ $EUID -ne 0 ]] && { echo "Run installer with sudo"; exit 1; }
 }
 
 require_cmd() {
@@ -82,16 +55,12 @@ require_cmd() {
     }
 }
 
-check_write_perm() {
-    [[ -w "$1" ]] || { echo "[ERROR] No write permission: $1"; exit 1; }
-}
-
 # ---------------- Package Manager ----------------
 
 detect_package_manager() {
-    command -v apt >/dev/null 2>&1 && echo "apt" && return
-    command -v dnf >/dev/null 2>&1 && echo "dnf" && return
-    command -v pacman >/dev/null 2>&1 && echo "pacman" && return
+    command -v apt >/dev/null 2>&1 && { echo "apt"; return; }
+    command -v dnf >/dev/null 2>&1 && { echo "dnf"; return; }
+    command -v pacman >/dev/null 2>&1 && { echo "pacman"; return; }
     echo "unknown"
 }
 
@@ -127,17 +96,16 @@ add_alias() {
         grep -q "hawkpro" "$BASHRC" || \
         echo "alias hawkpro='hawkproctl'" >> "$BASHRC"
     else
-        grep -q "$ALIAS_BLOCK_START" "$BASHRC" || \
+        grep -q "$ALIAS_START" "$BASHRC" || \
         cat >> "$BASHRC" <<EOF
 
-$ALIAS_BLOCK_START
+$ALIAS_START
 alias hawkpro='hawkproctl'
-$ALIAS_BLOCK_END
+$ALIAS_END
 EOF
     fi
 
     refresh_shell
-    echo "[*] Alias configured"
 }
 
 remove_alias() {
@@ -145,7 +113,7 @@ remove_alias() {
     if [[ "$BASHRC" == *fish/config.fish ]]; then
         sed -i "/hawkpro/d" "$BASHRC"
     else
-        sed -i "/$ALIAS_BLOCK_START/,/$ALIAS_BLOCK_END/d" "$BASHRC"
+        sed -i "/$ALIAS_START/,/$ALIAS_END/d" "$BASHRC"
     fi
 
     refresh_shell
@@ -162,11 +130,10 @@ INSTALL_BIN="/usr/local/bin"
 MAN_DIR="/usr/local/share/man/man1"
 
 BINARY="$INSTALL_BIN/hawkpro"
-CTL="$INSTALL_BIN/hawkproctl"
 MANPAGE="$MAN_DIR/hawkpro.1"
 
-ALIAS_BLOCK_START="# >>> HawkPro alias start >>>"
-ALIAS_BLOCK_END="# <<< HawkPro alias end <<<"
+ALIAS_START="# >>> HawkPro alias start >>>"
+ALIAS_END="# <<< HawkPro alias end <<<"
 
 require_root() {
     [[ $EUID -ne 0 ]] && { echo "Run with sudo"; exit 1; }
@@ -174,7 +141,7 @@ require_root() {
 
 remove_alias() {
     BASHRC="$HOME/.bashrc"
-    sed -i "/$ALIAS_BLOCK_START/,/$ALIAS_BLOCK_END/d" "$BASHRC" 2>/dev/null || true
+    sed -i "/$ALIAS_START/,/$ALIAS_END/d" "$BASHRC" 2>/dev/null || true
 }
 
 uninstall_hawkpro() {
@@ -184,27 +151,21 @@ uninstall_hawkpro() {
     echo "[*] Uninstalling HawkPro..."
 
     rm -f "$BINARY"
-    rm -f "$CTL"
     rm -f "$MANPAGE"
+    rm -f "$INSTALL_BIN/hawkproctl"
 
     remove_alias
 
     mandb >/dev/null 2>&1 || true
 
-    rm -f /usr/local/share/hawkpro_install_state
+    rm -f /usr/local/share/hawkpro.installed
 
-    echo "HawkPro fully uninstalled."
-}
-
-install_check() {
-    [[ -f "$BINARY" ]] && echo "HawkPro already installed" \
-        || echo "HawkPro not installed"
+    echo "HawkPro successfully uninstalled."
 }
 
 case "$1" in
     --uninstall) uninstall_hawkpro ;;
-    --install) install_check ;;
-    *) exec "$BINARY" "$@" ;;
+    *) exec "$BINARY" ;;
 esac
 
 EOF
@@ -217,33 +178,33 @@ chmod +x "$CTL"
 install_hawkpro() {
 
     require_root
-    start_transaction
 
-    [[ -f "$BINARY" ]] && { echo "Already installed"; exit 0; }
+    if [[ -f "$INSTALL_MARK" ]]; then
+        echo "HawkPro is already installed."
+        exit 0
+    fi
 
     require_cmd git
     require_cmd cmake
     require_cmd make
 
-    check_write_perm "$INSTALL_BIN"
-
     install_dependencies
 
-    echo "[*] Cloning repo..."
+    echo "[*] Cloning repository..."
     git clone --depth 1 "$REPO_URL" "$TMP_DIR"
 
     trap 'rm -rf "$TMP_DIR"' EXIT
 
     echo "[*] Building..."
-    cd "$TMP_DIR"
+    cd "$TMP_DIR/build" || {
+        mkdir build
+        cd build
+    }
 
-    mkdir -p build
-    cd build
-
-    cmake .
+    cmake ..
     make -j"$(nproc)"
 
-    echo "[*] Installing binary..."
+    echo "[*] Installing binaries..."
     cp hawkpro "$BINARY"
     chmod +x "$BINARY"
 
@@ -261,11 +222,14 @@ install_hawkpro() {
     echo "[*] Configuring alias..."
     add_alias
 
-    commit_transaction
+    touch "$INSTALL_MARK"
 
     echo ""
-    echo "HawkPro installed successfully"
+    echo "✅ HawkPro installed successfully"
     echo "Run: hawkpro"
+    echo "Uninstall: hawkpro --uninstall"
 }
+
+# ---------------- Entry ----------------
 
 install_hawkpro
