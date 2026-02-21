@@ -40,6 +40,7 @@
 
 ```bash
 wget https://github.com/3rr0r-505/HawkPro/raw/main/installer.sh
+chmod +x installer.sh
 sudo bash installer.sh
 ```
 
