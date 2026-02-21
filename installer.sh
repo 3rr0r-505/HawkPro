@@ -183,7 +183,7 @@ install_hawkpro() {
     
     echo ""
     echo "---------------------------------"
-    echo "[✓] HawkPro v1.0.0 Installed"
+    echo "[✓] HawkPro v1.0.1 Installed"
     echo "[#] Command: hawkpro"
     echo "[#] Uninstall: hawkpro-uninstall"
     echo "---------------------------------"
