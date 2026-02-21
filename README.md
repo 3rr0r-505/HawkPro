@@ -12,17 +12,18 @@
 
 ## ⚡ Overview
 
-**HawkPro** is a lightweight, terminal-based Linux process monitoring tool built using **C++ and ncurses**. It provides real-time system insights with a clean keyboard-driven interface and minimal resource overhead.
+HawkPro is a lightweight, terminal-based Linux process monitoring tool built with C++ and ncurses. It delivers real-time CPU and memory insights through a clean, keyboard-driven interface while maintaining minimal system overhead.
 
 ---
 
 ## ✨ Features
 
-✅ Real-time CPU and Memory monitoring  
-✅ Sort processes dynamically  
-✅ Navigation & Search  
-✅ Built-in documentation  t  
-✅ Container support via Docker  
+- ⚡ Real-time CPU and memory monitoring
+- 📊 Dynamic process sorting (CPU / Memory / User)
+- 🔍 Process search (Ctrl + F)
+- ⬆⬇ Arrow key navigation
+- 📖 Built-in man page
+- 🐳 Optional Docker support
 
 ## 🛠 Tech Stack
 
