@@ -23,7 +23,7 @@ MANPAGE="$MAN_DIR/hawkpro.1"
 # ---------------- Safety Helpers ----------------
 
 require_root() {
-    [[ "$(id -u)" != "0" ]] && {
+    [[ "$(id -u)" -ne 0 ]] && {
         echo "Run installer with sudo"
         exit 1
     }
