@@ -2,7 +2,7 @@
 
 # -----------------------------------------------------------------------------
 # HawkPro Bootstrap Installer
-# v1.0.1 - Cocoon
+# v1.0.3 - Peregrine
 # -----------------------------------------------------------------------------
 
 set -euo pipefail
@@ -183,7 +183,7 @@ install_hawkpro() {
     
     echo ""
     echo "---------------------------------"
-    echo "[✓] HawkPro v1.0.1 Installed"
+    echo "[✓] HawkPro v1.0.3 Installed"
     echo "[#] Command: hawkpro"
     echo "[#] Uninstall: hawkpro-uninstall"
     echo "---------------------------------"
