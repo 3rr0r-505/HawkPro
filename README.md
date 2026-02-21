@@ -1,4 +1,4 @@
-#  HawkPro
+#  HawkPro - Terminal-based Linux Process Monitor
 
 ![Language](https://img.shields.io/badge/Language-C%2B%2B-blue?logo=c%2B%2B)
 ![Standard](https://img.shields.io/badge/C%2B%2B-11%2B-blueviolet?logo=c%2B%2B)
