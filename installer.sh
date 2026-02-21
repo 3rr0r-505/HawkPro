@@ -1,7 +1,8 @@
 #!/usr/bin/env bash
+
 # -----------------------------------------------------------------------------
 # HawkPro Bootstrap Installer
-# Ultra Robust Production Edition
+# v1.1.1 - Robust Release
 # -----------------------------------------------------------------------------
 
 set -euo pipefail
@@ -16,31 +17,16 @@ MAN_DIR="/usr/local/share/man/man1"
 INSTALL_MARK="/usr/local/share/hawkpro.installed"
 
 BINARY="$INSTALL_BIN/hawkpro"
-CTL="$INSTALL_BIN/hawkproctl"
+CTL="$INSTALL_BIN/hawkpro-uninstall"
 MANPAGE="$MAN_DIR/hawkpro.1"
-
-ALIAS_START="# >>> HawkPro alias start >>>"
-ALIAS_END="# <<< HawkPro alias end <<<"
-
-# ---------------- Shell Detection ----------------
-
-detect_shell_rc() {
-    case "$SHELL" in
-        */zsh) echo "$HOME/.zshrc" ;;
-        */fish) echo "$HOME/.config/fish/config.fish" ;;
-        *) echo "$HOME/.bashrc" ;;
-    esac
-}
-
-BASHRC="$(detect_shell_rc)"
 
 # ---------------- Safety Helpers ----------------
 
 require_root() {
-    if [[ "$(id -u)" != "0" ]]; then
+    [[ "$(id -u)" != "0" ]] && {
         echo "Run installer with sudo"
         exit 1
-    fi
+    }
 }
 
 require_cmd() {
@@ -48,16 +34,6 @@ require_cmd() {
         echo "[ERROR] Missing dependency: $1"
         exit 1
     }
-}
-
-# ---------------- Shell Refresh ----------------
-
-refresh_shell() {
-    if [[ "$BASHRC" == *fish/config.fish ]]; then
-        fish -c "source $BASHRC" 2>/dev/null || true
-    else
-        source "$BASHRC" 2>/dev/null || true
-    fi
 }
 
 # ---------------- Dependency Install ----------------
@@ -77,51 +53,20 @@ install_dependencies() {
 
     case "$PM" in
         apt)
-            apt update
-            apt install -y build-essential cmake git libncurses-dev man-db
+            apt update -qq
+            apt install -y build-essential cmake git libncurses-dev man-db &>/dev/null
             ;;
         dnf)
-            dnf install -y gcc-c++ make cmake git ncurses-devel man-db
+            dnf install -y gcc-c++ make cmake git ncurses-devel man-db &>/dev/null
             ;;
         pacman)
-            pacman -Sy --noconfirm base-devel cmake git ncurses man-db
+            pacman -Sy --noconfirm base-devel cmake git ncurses man-db &>/dev/null
             ;;
         *)
             echo "Unsupported package manager"
             exit 1
             ;;
     esac
-}
-
-# ---------------- Alias Management ----------------
-
-add_alias() {
-
-    if [[ "$BASHRC" == *fish/config.fish ]]; then
-        grep -q "hawkpro" "$BASHRC" || \
-        echo "alias hawkpro='hawkproctl'" >> "$BASHRC"
-    else
-        grep -q "$ALIAS_START" "$BASHRC" || \
-        cat >> "$BASHRC" <<EOF
-
-$ALIAS_START
-alias hawkpro='hawkproctl'
-$ALIAS_END
-EOF
-    fi
-
-    refresh_shell
-}
-
-remove_alias() {
-
-    if [[ "$BASHRC" == *fish/config.fish ]]; then
-        sed -i "/hawkpro/d" "$BASHRC" || true
-    else
-        sed -i "/$ALIAS_START/,/$ALIAS_END/d" "$BASHRC" || true
-    fi
-
-    refresh_shell
 }
 
 # ---------------- Lifecycle Manager ----------------
@@ -132,15 +77,11 @@ cat > "$CTL" << 'EOF'
 #!/usr/bin/env bash
 
 BINARY="/usr/local/bin/hawkpro"
+UNINSTALLER="/usr/local/bin/hawkpro-uninstall"
 MANPAGE="/usr/local/share/man/man1/hawkpro.1"
 
 require_root() {
     [[ "$(id -u)" != "0" ]] && { echo "Run with sudo"; exit 1; }
-}
-
-remove_alias() {
-    BASHRC="$HOME/.bashrc"
-    sed -i "/# >>> HawkPro alias start >>>/,/# <<< HawkPro alias end <<< /d" "$BASHRC" 2>/dev/null || true
 }
 
 uninstall_hawkpro() {
@@ -151,20 +92,17 @@ uninstall_hawkpro() {
 
     rm -f "$BINARY"
     rm -f "$MANPAGE"
-    rm -f /usr/local/bin/hawkproctl
-
-    remove_alias
-
+    rm -f "$UNINSTALLER"
     rm -f /usr/local/share/hawkpro.installed
 
     mandb >/dev/null 2>&1 || true
 
-    echo "HawkPro successfully uninstalled."
+    echo "[#] HawkPro successfully uninstalled."
 }
 
 case "$1" in
     --uninstall) uninstall_hawkpro ;;
-    *) exec "$BINARY" ;;
+    *) echo "Usage: hawkpro-uninstall --uninstall" ;;
 esac
 
 EOF
@@ -178,10 +116,10 @@ install_hawkpro() {
 
     require_root
 
-    if [[ -f "$INSTALL_MARK" ]]; then
+    [[ -f "$INSTALL_MARK" ]] && {
         echo "HawkPro already installed"
         exit 0
-    fi
+    }
 
     require_cmd git
     require_cmd cmake
@@ -200,33 +138,57 @@ install_hawkpro() {
     mkdir -p build
     cd build
 
-    cmake ..
-    make -j"$(nproc)"
+    cmake .. &>/dev/null || {
+        echo "[ERROR] CMake configuration failed"
+        exit 1
+    }
+
+    make -j"$(nproc)" &>/dev/null || {
+        echo "[ERROR] Build failed"
+        exit 1
+    }
+
+    # ---- Binary detection safety ----
+    BIN_SRC=$(find . -type f -name hawkpro -executable | head -n 1)
+
+    [[ -z "$BIN_SRC" ]] && {
+        echo "[ERROR] Binary not generated after build"
+        exit 1
+    }
 
     echo "[*] Installing binaries..."
-    cp hawkpro "$BINARY"
-    chmod +x "$BINARY"
+    install -Dm755 "$BIN_SRC" "$BINARY"
 
+    # ---- Man page install ----
     echo "[*] Installing man page..."
+
     mkdir -p "$MAN_DIR"
 
     if [[ -f ../docs/hawkpro.1 ]]; then
-        cp ../docs/hawkpro.1 "$MANPAGE"
+        install -Dm644 ../docs/hawkpro.1 "$MANPAGE"
         mandb >/dev/null 2>&1 || true
+        echo "[✓] Man page installed"
+    else
+        echo "[!] Warning: Man page not found"
     fi
 
     echo "[*] Installing lifecycle manager..."
     create_ctl
 
-    echo "[*] Configuring alias..."
-    add_alias
-
     touch "$INSTALL_MARK"
 
+    # ---- Post install verification ----
+    command -v hawkpro >/dev/null || {
+        echo "[ERROR] Installation verification failed"
+        exit 1
+    }
+
     echo ""
-    echo "✅ HawkPro Installed Successfully"
-    echo "Run: hawkpro"
-    echo "Uninstall: hawkpro --uninstall"
+    echo "---------------------------------"
+    echo "[#] HawkPro Installed"
+    echo "[#] Command: hawkpro"
+    echo "[#] Uninstall: hawkpro-uninstall"
+    echo "---------------------------------"
 }
 
 # ---------------- Entry ----------------
