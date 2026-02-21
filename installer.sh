@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # -----------------------------------------------------------------------------
 # HawkPro Bootstrap Installer
-# v1.1.0 - Cocoons
+# v1.1.0 - Cocoon
 # -----------------------------------------------------------------------------
 
 set -e
@@ -34,19 +34,25 @@ detect_shell_rc() {
 
 BASHRC="$(detect_shell_rc)"
 
+# ---------------- Shell Refresh ----------------
+
+refresh_shell() {
+    if [[ "$BASHRC" == *fish/config.fish ]]; then
+        fish -c "source $BASHRC" 2>/dev/null || true
+    else
+        source "$BASHRC" 2>/dev/null || true
+    fi
+}
+
 # ---------------- Transaction System ----------------
 
-start_transaction() {
-    echo "IN_PROGRESS" > "$STATE_FILE"
-}
+start_transaction() { echo "IN_PROGRESS" > "$STATE_FILE"; }
 
-commit_transaction() {
-    echo "INSTALLED" > "$STATE_FILE"
-}
+commit_transaction() { echo "INSTALLED" > "$STATE_FILE"; }
 
 rollback_install() {
 
-    echo "[!] Rolling back installation..."
+    echo "[!] Rolling back..."
 
     rm -f "$BINARY"
     rm -f "$CTL"
@@ -66,10 +72,7 @@ trap 'rollback_install' ERR
 # ---------------- Safety Helpers ----------------
 
 require_root() {
-    if [[ $EUID -ne 0 ]]; then
-        echo "Run with sudo"
-        exit 1
-    fi
+    [[ $EUID -ne 0 ]] && { echo "Run with sudo"; exit 1; }
 }
 
 require_cmd() {
@@ -80,20 +83,16 @@ require_cmd() {
 }
 
 check_write_perm() {
-    [[ -w "$1" ]] || {
-        echo "[ERROR] No write permission: $1"
-        exit 1
-    }
+    [[ -w "$1" ]] || { echo "[ERROR] No write permission: $1"; exit 1; }
 }
 
 # ---------------- Package Manager ----------------
 
 detect_package_manager() {
-    if command -v apt >/dev/null 2>&1; then echo "apt"
-    elif command -v dnf >/dev/null 2>&1; then echo "dnf"
-    elif command -v pacman >/dev/null 2>&1; then echo "pacman"
-    else echo "unknown"
-    fi
+    command -v apt >/dev/null 2>&1 && echo "apt" && return
+    command -v dnf >/dev/null 2>&1 && echo "dnf" && return
+    command -v pacman >/dev/null 2>&1 && echo "pacman" && return
+    echo "unknown"
 }
 
 install_dependencies() {
@@ -137,6 +136,7 @@ $ALIAS_BLOCK_END
 EOF
     fi
 
+    refresh_shell
     echo "[*] Alias configured"
 }
 
@@ -147,6 +147,8 @@ remove_alias() {
     else
         sed -i "/$ALIAS_BLOCK_START/,/$ALIAS_BLOCK_END/d" "$BASHRC"
     fi
+
+    refresh_shell
 }
 
 # ---------------- Lifecycle Manager ----------------
@@ -238,7 +240,7 @@ install_hawkpro() {
     mkdir -p build
     cd build
 
-    cmake ..
+    cmake .
     make -j"$(nproc)"
 
     echo "[*] Installing binary..."
