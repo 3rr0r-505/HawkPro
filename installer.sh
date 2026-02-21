@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # -----------------------------------------------------------------------------
 # HawkPro Bootstrap Installer
-# Final Production Release Edition
+# Ultra Robust Production Edition
 # -----------------------------------------------------------------------------
 
 set -euo pipefail
@@ -34,18 +34,13 @@ detect_shell_rc() {
 
 BASHRC="$(detect_shell_rc)"
 
-refresh_shell() {
-    if [[ "$BASHRC" == *fish/config.fish ]]; then
-        fish -c "source $BASHRC" 2>/dev/null || true
-    else
-        source "$BASHRC" 2>/dev/null || true
-    fi
-}
-
 # ---------------- Safety Helpers ----------------
 
 require_root() {
-    [[ $EUID -ne 0 ]] && { echo "Run installer with sudo"; exit 1; }
+    if [[ "$(id -u)" != "0" ]]; then
+        echo "Run installer with sudo"
+        exit 1
+    fi
 }
 
 require_cmd() {
@@ -55,7 +50,17 @@ require_cmd() {
     }
 }
 
-# ---------------- Package Manager ----------------
+# ---------------- Shell Refresh ----------------
+
+refresh_shell() {
+    if [[ "$BASHRC" == *fish/config.fish ]]; then
+        fish -c "source $BASHRC" 2>/dev/null || true
+    else
+        source "$BASHRC" 2>/dev/null || true
+    fi
+}
+
+# ---------------- Dependency Install ----------------
 
 detect_package_manager() {
     command -v apt >/dev/null 2>&1 && { echo "apt"; return; }
@@ -111,9 +116,9 @@ EOF
 remove_alias() {
 
     if [[ "$BASHRC" == *fish/config.fish ]]; then
-        sed -i "/hawkpro/d" "$BASHRC"
+        sed -i "/hawkpro/d" "$BASHRC" || true
     else
-        sed -i "/$ALIAS_START/,/$ALIAS_END/d" "$BASHRC"
+        sed -i "/$ALIAS_START/,/$ALIAS_END/d" "$BASHRC" || true
     fi
 
     refresh_shell
@@ -126,22 +131,16 @@ create_ctl() {
 cat > "$CTL" << 'EOF'
 #!/usr/bin/env bash
 
-INSTALL_BIN="/usr/local/bin"
-MAN_DIR="/usr/local/share/man/man1"
-
-BINARY="$INSTALL_BIN/hawkpro"
-MANPAGE="$MAN_DIR/hawkpro.1"
-
-ALIAS_START="# >>> HawkPro alias start >>>"
-ALIAS_END="# <<< HawkPro alias end <<<"
+BINARY="/usr/local/bin/hawkpro"
+MANPAGE="/usr/local/share/man/man1/hawkpro.1"
 
 require_root() {
-    [[ $EUID -ne 0 ]] && { echo "Run with sudo"; exit 1; }
+    [[ "$(id -u)" != "0" ]] && { echo "Run with sudo"; exit 1; }
 }
 
 remove_alias() {
     BASHRC="$HOME/.bashrc"
-    sed -i "/$ALIAS_START/,/$ALIAS_END/d" "$BASHRC" 2>/dev/null || true
+    sed -i "/# >>> HawkPro alias start >>>/,/# <<< HawkPro alias end <<< /d" "$BASHRC" 2>/dev/null || true
 }
 
 uninstall_hawkpro() {
@@ -152,13 +151,13 @@ uninstall_hawkpro() {
 
     rm -f "$BINARY"
     rm -f "$MANPAGE"
-    rm -f "$INSTALL_BIN/hawkproctl"
+    rm -f /usr/local/bin/hawkproctl
 
     remove_alias
 
-    mandb >/dev/null 2>&1 || true
-
     rm -f /usr/local/share/hawkpro.installed
+
+    mandb >/dev/null 2>&1 || true
 
     echo "HawkPro successfully uninstalled."
 }
@@ -180,7 +179,7 @@ install_hawkpro() {
     require_root
 
     if [[ -f "$INSTALL_MARK" ]]; then
-        echo "HawkPro is already installed."
+        echo "HawkPro already installed"
         exit 0
     fi
 
@@ -196,10 +195,10 @@ install_hawkpro() {
     trap 'rm -rf "$TMP_DIR"' EXIT
 
     echo "[*] Building..."
-    cd "$TMP_DIR/build" || {
-        mkdir build
-        cd build
-    }
+
+    cd "$TMP_DIR"
+    mkdir -p build
+    cd build
 
     cmake ..
     make -j"$(nproc)"
@@ -225,7 +224,7 @@ install_hawkpro() {
     touch "$INSTALL_MARK"
 
     echo ""
-    echo "✅ HawkPro installed successfully"
+    echo "✅ HawkPro Installed Successfully"
     echo "Run: hawkpro"
     echo "Uninstall: hawkpro --uninstall"
 }
