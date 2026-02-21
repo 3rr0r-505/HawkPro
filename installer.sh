@@ -2,7 +2,7 @@
 
 # -----------------------------------------------------------------------------
 # HawkPro Bootstrap Installer
-# v1.1.1 - Robust Release
+# v1.0.1 - Cocoon
 # -----------------------------------------------------------------------------
 
 set -euo pipefail
@@ -21,14 +21,13 @@ CTL="$INSTALL_BIN/hawkpro-uninstall"
 MANPAGE="$MAN_DIR/hawkpro.1"
 
 # ---------------- Safety Helpers ----------------
-
 require_root() {
-    [[ "$(id -u)" -ne 0 ]] && {
+    if [[ "$EUID" -ne 0 ]]; then
         echo "Run installer with sudo"
+        exec sudo "$0" "$@"
         exit 1
-    }
+    fi
 }
-
 require_cmd() {
     command -v "$1" >/dev/null 2>&1 || {
         echo "[ERROR] Missing dependency: $1"
@@ -99,12 +98,7 @@ uninstall_hawkpro() {
 
     echo "[#] HawkPro successfully uninstalled."
 }
-
-case "$1" in
-    --uninstall) uninstall_hawkpro ;;
-    *) echo "Usage: hawkpro-uninstall --uninstall" ;;
-esac
-
+uninstall_hawkpro
 EOF
 
 chmod +x "$CTL"
@@ -127,11 +121,13 @@ install_hawkpro() {
 
     install_dependencies
 
+    echo ""
     echo "[*] Cloning repository..."
-    git clone --depth 1 "$REPO_URL" "$TMP_DIR"
+    git clone --depth 1 "$REPO_URL" "$TMP_DIR" &>/dev/null
 
     trap 'rm -rf "$TMP_DIR"' EXIT
 
+    echo ""
     echo "[*] Building..."
 
     cd "$TMP_DIR"
@@ -160,6 +156,7 @@ install_hawkpro() {
     install -Dm755 "$BIN_SRC" "$BINARY"
 
     # ---- Man page install ----
+    echo ""
     echo "[*] Installing man page..."
 
     mkdir -p "$MAN_DIR"
@@ -172,20 +169,21 @@ install_hawkpro() {
         echo "[!] Warning: Man page not found"
     fi
 
+    echo ""
     echo "[*] Installing lifecycle manager..."
     create_ctl
 
     touch "$INSTALL_MARK"
 
     # ---- Post install verification ----
-    command -v hawkpro >/dev/null || {
-        echo "[ERROR] Installation verification failed"
-        exit 1
-    }
-
+    if ! command -v hawkpro >/dev/null 2>&1; then
+        echo ""
+        echo "[!] Warning: HawkPro command may not be available in PATH yet"
+    fi
+    
     echo ""
     echo "---------------------------------"
-    echo "[#] HawkPro Installed"
+    echo "[✓] HawkPro v1.0.0 Installed"
     echo "[#] Command: hawkpro"
     echo "[#] Uninstall: hawkpro-uninstall"
     echo "---------------------------------"
@@ -193,4 +191,8 @@ install_hawkpro() {
 
 # ---------------- Entry ----------------
 
-install_hawkpro
+main() {
+    install_hawkpro
+}
+
+main "$@"
