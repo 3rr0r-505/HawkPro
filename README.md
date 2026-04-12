@@ -1,3 +1,5 @@
+<div align="center">
+  
 #  HawkPro - Terminal-based Linux Process Monitor
 
 ![Language](https://img.shields.io/badge/Language-C%2B%2B-blue?logo=c%2B%2B)
@@ -9,6 +11,8 @@
 ![Interface](https://img.shields.io/badge/UI-Terminal-darkgreen?logo=gnubash)
 ![Data Source](https://img.shields.io/badge/Data-/proc-critical?logo=linux)
 ![Docker](https://img.shields.io/badge/Docker-Supported-2496ED?logo=docker)
+
+</div>
 
 ## ⚡ Overview
 
